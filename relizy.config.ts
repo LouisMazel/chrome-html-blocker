@@ -17,4 +17,8 @@ export default defineConfig({
     packageManager: 'npm',
     safetyCheck: true,
   },
+
+  release: {
+    publish: false,
+  },
 })
