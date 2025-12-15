@@ -1,7 +1,7 @@
 {
   "name": "html-blocker",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Automatically remove intrusive HTML elements from websites",
   "author": "LouisMazel <me@loicmazuel.com>",
   "license": "MIT",
