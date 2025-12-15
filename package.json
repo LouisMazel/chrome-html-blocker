@@ -1,0 +1,55 @@
+{
+  "name": "html-blocker",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Automatically remove intrusive HTML elements from websites",
+  "author": "LouisMazel <me@loicmazuel.com>",
+  "license": "MIT",
+  "keywords": [
+    "chrome-extension",
+    "modal-blocker",
+    "adblock"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "dev": "vite build --watch",
+    "clean": "rm -rf dist",
+    "pre-commit": "lint-staged",
+    "lint": "pnpm lint:js && pnpm lint:style",
+    "lint:fix": "pnpm lint:js --fix && pnpm lint:style --fix",
+    "lint:js": "cross-env NODE_ENV=production eslint .",
+    "lint:style": "stylelint \"./**/*.{css,scss,postcss,pcss,html}\"",
+    "relizy": "relizy",
+    "release": "pnpm lint && pnpm typecheck && pnpm build && pnpm relizy release",
+    "release:beta": "pnpm lint && pnpm typecheck && pnpm build && pnpm relizy release --prerelease --preid beta --tag beta",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "@commitlint/types": "^20.2.0",
+    "@crxjs/vite-plugin": "^2.0.0-beta.21",
+    "@maz-ui/eslint-config": "^4.3.2",
+    "@types/chrome": "^0.1.32",
+    "@types/node": "^25.0.2",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "relizy": "^0.2.6",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^7.3.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "jiti": "^2.6.1"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,mjs,mts,cjs,md,yml,json}": "cross-env NODE_ENV=production eslint --fix",
+    "*.{vue,css,scss,postcss,pcss}": "stylelint --fix --allow-empty-input"
+  }
+}
