@@ -1,5 +1,7 @@
 # HTML Blocker
 
+![html blocker](./assets/screenshots/image.png)
+
 Modern Chrome extension to automatically remove unwanted HTML elements from websites.
 
 ## Features
