@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.2...v0.2.0
+
+[compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.1.2...v0.2.0)
+
+### 🚀 Enhancements
+
+- Add default setting on add new site ([105bf46](https://github.com/LouisMazel/chrome-html-blocker/commit/105bf46))
+
+### ❤️ Contributors
+
+- LouisMazel ([@LouisMazel](https://github.com/LouisMazel))
+
 ## v0.1.1...v0.1.2
 
 [compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.1.1...v0.1.2)
