@@ -2,6 +2,7 @@
   "name": "html-blocker",
   "type": "module",
   "version": "0.1.1",
+  "packageManager": "pnpm@10.29.2",
   "description": "Automatically remove intrusive HTML elements from websites",
   "author": "LouisMazel <me@loicmazuel.com>",
   "license": "MIT",
