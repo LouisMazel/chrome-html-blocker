@@ -228,12 +228,27 @@ async function handleDeleteSite(siteId: string): Promise<void> {
 /**
  * Ouvre le modal pour ajouter un nouveau site
  */
-function openAddModal(): void {
+async function openAddModal(): Promise<void> {
   editingSiteId = null
   modalTitle.textContent = 'Add Site'
   siteNameInput.value = ''
   urlPatternInput.value = ''
   selectorInput.value = ''
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (tab?.title) {
+      siteNameInput.value = tab.title
+    }
+    if (tab?.url) {
+      const url = new URL(tab.url)
+      urlPatternInput.value = `*://${url.hostname}${url.pathname}*`
+    }
+  }
+  catch {
+    // Ignore - fields will stay empty
+  }
+
   formError.classList.add('hidden')
   editModal.classList.remove('hidden')
   siteNameInput.focus()
