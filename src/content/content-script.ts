@@ -40,7 +40,7 @@ function findMatchingSiteConfig(url: string, sites: SiteConfig[]): SiteConfig | 
       }
     }
     catch (error) {
-      console.error('[Modal Blocker] Invalid pattern:', site.urlPattern, error)
+      logger.error('[Modal Blocker] Invalid pattern:', site.urlPattern, error)
     }
   }
   return null
@@ -107,7 +107,6 @@ async function initialize(): Promise<void> {
 
     // Vérifier si l'extension est activée globalement
     if (!config.enabled) {
-      logger.warn('Extension is disabled globally')
       stopObserver()
       return
     }
@@ -117,7 +116,6 @@ async function initialize(): Promise<void> {
     const siteConfig = findMatchingSiteConfig(currentUrl, config.sites)
 
     if (!siteConfig) {
-      logger.warn('No matching configuration for:', currentUrl)
       stopObserver()
       return
     }
@@ -137,7 +135,7 @@ async function initialize(): Promise<void> {
     }
   }
   catch (error) {
-    console.error('[HTML Blocker] Initialization error:', error)
+    logger.error('[HTML Blocker] Initialization error:', error)
   }
 }
 

@@ -1,4 +1,5 @@
 import type { BlockingStats, SiteConfig } from '../shared/types'
+import { logger } from '../shared/logger'
 import { addSite, deleteSite, getConfig, getStats, resetStats, saveConfig, updateSite } from '../shared/storage'
 
 // Éléments DOM
@@ -190,7 +191,7 @@ async function handleGlobalToggle(enabled: boolean): Promise<void> {
     toggleLabel.textContent = enabled ? 'Enabled' : 'Disabled'
   }
   catch (error) {
-    console.error('Error toggling extension:', error)
+    logger.error('Error toggling extension:', error)
     await showAlert('Error updating extension status')
     extensionToggle.checked = !enabled
   }
@@ -204,7 +205,7 @@ async function handleSiteToggle(siteId: string, enabled: boolean): Promise<void>
     await updateSite(siteId, { enabled })
   }
   catch (error) {
-    console.error('Error toggling site:', error)
+    logger.error('Error toggling site:', error)
     await showAlert('Error updating site')
     await loadAndRender()
   }
@@ -219,7 +220,7 @@ async function handleDeleteSite(siteId: string): Promise<void> {
     await loadAndRender()
   }
   catch (error) {
-    console.error('Error deleting site:', error)
+    logger.error('Error deleting site:', error)
     await showAlert('Error deleting site')
   }
 }
@@ -341,7 +342,7 @@ async function handleFormSubmit(e: Event): Promise<void> {
     await loadAndRender()
   }
   catch (error) {
-    console.error('Error saving site:', error)
+    logger.error('Error saving site:', error)
     formError.textContent = 'Error saving site'
     formError.classList.remove('hidden')
   }
@@ -376,7 +377,7 @@ async function handleResetStats(): Promise<void> {
       await loadAndRender()
     }
     catch (error) {
-      console.error('Error resetting stats:', error)
+      logger.error('Error resetting stats:', error)
       await showAlert('Error resetting statistics')
     }
   }

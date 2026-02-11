@@ -19,7 +19,7 @@ async function updateBadge(): Promise<void> {
     }
   }
   catch (error) {
-    console.error('[Service Worker] Error updating badge:', error)
+    logger.error('[Service Worker] Error updating badge:', error)
   }
 }
 
@@ -42,7 +42,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await updateBadge()
   }
   catch (error) {
-    console.error('[Service Worker] Error during installation:', error)
+    logger.error('[Service Worker] Error during installation:', error)
   }
 })
 

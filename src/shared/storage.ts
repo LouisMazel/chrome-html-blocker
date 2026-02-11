@@ -1,5 +1,6 @@
 import type { BlockingStats, ExtensionConfig, SiteConfig, StatsStorageData, StorageData } from './types'
 import { DEFAULT_CONFIG, STORAGE_KEY } from './constants'
+import { logger } from './logger'
 
 const STATS_KEY = 'stats'
 
@@ -13,7 +14,7 @@ export async function getConfig(): Promise<ExtensionConfig> {
     return result.config || DEFAULT_CONFIG
   }
   catch (error) {
-    console.error('[Storage] Error getting config:', error)
+    logger.error('[Storage] Error getting config:', error)
     return DEFAULT_CONFIG
   }
 }
@@ -26,7 +27,7 @@ export async function saveConfig(config: ExtensionConfig): Promise<void> {
     await chrome.storage.sync.set({ [STORAGE_KEY]: config })
   }
   catch (error) {
-    console.error('[Storage] Error saving config:', error)
+    logger.error('[Storage] Error saving config:', error)
     throw error
   }
 }
@@ -41,7 +42,7 @@ export async function updateConfig(updates: Partial<ExtensionConfig>): Promise<v
     await saveConfig(newConfig)
   }
   catch (error) {
-    console.error('[Storage] Error updating config:', error)
+    logger.error('[Storage] Error updating config:', error)
     throw error
   }
 }
@@ -60,7 +61,7 @@ export async function addSite(site: Omit<SiteConfig, 'id'>): Promise<void> {
     await saveConfig(config)
   }
   catch (error) {
-    console.error('[Storage] Error adding site:', error)
+    logger.error('[Storage] Error adding site:', error)
     throw error
   }
 }
@@ -81,7 +82,7 @@ export async function updateSite(id: string, updates: Partial<SiteConfig>): Prom
     await saveConfig(config)
   }
   catch (error) {
-    console.error('[Storage] Error updating site:', error)
+    logger.error('[Storage] Error updating site:', error)
     throw error
   }
 }
@@ -96,7 +97,7 @@ export async function deleteSite(id: string): Promise<void> {
     await saveConfig(config)
   }
   catch (error) {
-    console.error('[Storage] Error deleting site:', error)
+    logger.error('[Storage] Error deleting site:', error)
     throw error
   }
 }
@@ -119,7 +120,7 @@ export async function getStats(): Promise<BlockingStats> {
     }
   }
   catch (error) {
-    console.error('[Storage] Error getting stats:', error)
+    logger.error('[Storage] Error getting stats:', error)
     return {
       totalBlocked: 0,
       siteStats: {},
@@ -136,7 +137,7 @@ export async function saveStats(stats: BlockingStats): Promise<void> {
     await chrome.storage.local.set({ [STATS_KEY]: stats })
   }
   catch (error) {
-    console.error('[Storage] Error saving stats:', error)
+    logger.error('[Storage] Error saving stats:', error)
     throw error
   }
 }
@@ -152,7 +153,7 @@ export async function incrementBlockedCount(siteId: string, count: number = 1): 
     await saveStats(stats)
   }
   catch (error) {
-    console.error('[Storage] Error incrementing blocked count:', error)
+    logger.error('[Storage] Error incrementing blocked count:', error)
   }
 }
 
@@ -169,7 +170,7 @@ export async function resetStats(): Promise<void> {
     await saveStats(stats)
   }
   catch (error) {
-    console.error('[Storage] Error resetting stats:', error)
+    logger.error('[Storage] Error resetting stats:', error)
     throw error
   }
 }
