@@ -1,6 +1,7 @@
 import type { BlockingStats, SiteConfig } from '../shared/types'
 import { logger } from '../shared/logger'
-import { addSite, deleteSite, getConfig, getStats, resetStats, saveConfig, updateSite } from '../shared/storage'
+import { addSite, clearPickerState, deleteSite, getConfig, getPickerFormState, getPickerResult, getStats, resetStats, saveConfig, savePickerFormState, setPickerActive, updateSite } from '../shared/storage'
+import { MessageType } from '../shared/types'
 
 // Éléments DOM
 const extensionToggle = document.getElementById('extensionToggle') as HTMLInputElement
@@ -29,6 +30,9 @@ const confirmCancelBtn = document.getElementById('confirmCancelBtn') as HTMLButt
 const alertModal = document.getElementById('alertModal') as HTMLDivElement
 const alertMessage = document.getElementById('alertMessage') as HTMLParagraphElement
 const alertOkBtn = document.getElementById('alertOkBtn') as HTMLButtonElement
+
+// Picker
+const pickElementBtn = document.getElementById('pickElementBtn') as HTMLButtonElement
 
 // Variable pour suivre l'édition
 let editingSiteId: string | null = null
@@ -363,6 +367,112 @@ async function handleFormSubmit(e: Event): Promise<void> {
   }
 }
 
+// ============================================
+// PICKER
+// ============================================
+
+/**
+ * Vérifie au démarrage s'il y a un résultat picker en storage
+ */
+async function checkPickerResult(): Promise<void> {
+  try {
+    const [formState, pickerResult] = await Promise.all([
+      getPickerFormState(),
+      getPickerResult(),
+    ])
+
+    if (!formState)
+      return
+
+    // Restaurer le formulaire
+    editingSiteId = formState.editingSiteId
+    modalTitle.textContent = editingSiteId ? 'Edit Site' : 'Add Site'
+    siteNameInput.value = formState.siteName
+    urlPatternInput.value = formState.urlPattern
+
+    if (pickerResult) {
+      selectorInput.value = pickerResult.selector
+      // Highlight vert temporaire
+      selectorInput.classList.add('picker-filled')
+      selectorInput.addEventListener('animationend', () => {
+        selectorInput.classList.remove('picker-filled')
+      }, { once: true })
+    }
+    else {
+      selectorInput.value = formState.selector
+    }
+
+    formError.classList.add('hidden')
+    editModal.classList.remove('hidden')
+
+    // Nettoyage
+    await clearPickerState()
+  }
+  catch (error) {
+    logger.error('Error checking picker result:', error)
+  }
+}
+
+/**
+ * Gère le clic sur le bouton Pick
+ */
+async function handlePickElement(): Promise<void> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+
+    if (!tab?.id || !tab.url) {
+      await showAlert('Cannot pick elements on this page.')
+      return
+    }
+
+    // Bloquer les pages chrome://
+    if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
+      await showAlert('Cannot pick elements on browser internal pages.')
+      return
+    }
+
+    // Sauvegarder l'état du formulaire
+    await savePickerFormState({
+      siteName: siteNameInput.value,
+      urlPattern: urlPatternInput.value,
+      selector: selectorInput.value,
+      editingSiteId,
+    })
+
+    await setPickerActive(true)
+
+    // Envoyer le message au content script
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: MessageType.ENTER_PICKER_MODE })
+    }
+    catch {
+      // Content script pas chargé, injecter via scripting API
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['src/content/content-script.js'],
+        })
+        // Réessayer après injection
+        await chrome.tabs.sendMessage(tab.id, { type: MessageType.ENTER_PICKER_MODE })
+      }
+      catch {
+        await clearPickerState()
+        await showAlert('Could not connect to this page. Try reloading it first.')
+        return
+      }
+    }
+
+    // Feedback visuel : le bouton indique que le picker est actif
+    pickElementBtn.textContent = 'Picking…'
+    pickElementBtn.disabled = true
+  }
+  catch (error) {
+    logger.error('Error starting picker:', error)
+    await clearPickerState()
+    await showAlert('Error starting element picker.')
+  }
+}
+
 // Event Listeners
 extensionToggle.addEventListener('change', () => {
   handleGlobalToggle(extensionToggle.checked)
@@ -371,6 +481,7 @@ extensionToggle.addEventListener('change', () => {
 addSiteBtn.addEventListener('click', openAddModal)
 cancelBtn.addEventListener('click', closeModal)
 siteForm.addEventListener('submit', handleFormSubmit)
+pickElementBtn.addEventListener('click', handlePickElement)
 
 // Fermer le modal en cliquant sur l'overlay
 editModal.addEventListener('click', (e) => {
@@ -379,8 +490,8 @@ editModal.addEventListener('click', (e) => {
   }
 })
 
-// Charger la configuration au démarrage
-loadAndRender()
+// Charger la configuration au démarrage et vérifier le picker
+checkPickerResult().then(() => loadAndRender())
 
 /**
  * Gère le reset des statistiques

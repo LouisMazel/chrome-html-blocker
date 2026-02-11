@@ -4,7 +4,8 @@
   "description": "Automatically remove intrusive HTML elements from websites",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"

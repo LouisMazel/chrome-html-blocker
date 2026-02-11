@@ -35,9 +35,24 @@ export enum MessageType {
   UPDATE_SITE = 'UPDATE_SITE',
   DELETE_SITE = 'DELETE_SITE',
   REMOVE_MODALS = 'REMOVE_MODALS',
+  ENTER_PICKER_MODE = 'ENTER_PICKER_MODE',
+  PICKER_DONE = 'PICKER_DONE',
 }
 
 export interface Message {
   type: MessageType
   payload?: any
+}
+
+// Picker types
+export interface PickerFormState {
+  siteName: string
+  urlPattern: string
+  selector: string
+  editingSiteId: string | null
+}
+
+export interface PickerResult {
+  selector: string
+  timestamp: number
 }

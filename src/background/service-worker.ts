@@ -1,6 +1,8 @@
+import type { Message } from '../shared/types'
 import { DEFAULT_CONFIG } from '../shared/constants'
 import { logger } from '../shared/logger'
-import { getConfig, saveConfig } from '../shared/storage'
+import { addSite, clearPickerState, getConfig, getPickerFormState, getPickerResult, saveConfig, updateSite } from '../shared/storage'
+import { MessageType } from '../shared/types'
 
 /**
  * Met à jour le badge de l'extension selon l'état activé/désactivé
@@ -53,6 +55,49 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync' && changes.config) {
     logger.info('[Service Worker] Configuration changed')
     updateBadge()
+  }
+})
+
+/**
+ * Écouter les messages des content scripts
+ */
+/**
+ * Fallback : sauvegarde directe si la popup ne peut pas se rouvrir
+ */
+async function autoSavePickerResult(): Promise<void> {
+  const [formState, pickerResult] = await Promise.all([
+    getPickerFormState(),
+    getPickerResult(),
+  ])
+
+  if (!formState || !pickerResult)
+    return
+
+  const siteData = {
+    name: formState.siteName || undefined,
+    urlPattern: formState.urlPattern,
+    selector: pickerResult.selector,
+    enabled: true,
+  }
+
+  if (formState.editingSiteId) {
+    await updateSite(formState.editingSiteId, siteData)
+  }
+  else {
+    await addSite(siteData)
+  }
+
+  await clearPickerState()
+  logger.info('[Service Worker] Auto-saved picker result')
+}
+
+chrome.runtime.onMessage.addListener((message: Message) => {
+  if (message.type === MessageType.PICKER_DONE) {
+    // Tenter de rouvrir la popup, sinon sauvegarder directement
+    chrome.action.openPopup().catch(() => {
+      logger.info('[Service Worker] Could not reopen popup, auto-saving')
+      autoSavePickerResult()
+    })
   }
 })
 

@@ -1,8 +1,11 @@
-import type { BlockingStats, ExtensionConfig, SiteConfig, StatsStorageData, StorageData } from './types'
+import type { BlockingStats, ExtensionConfig, PickerFormState, PickerResult, SiteConfig, StatsStorageData, StorageData } from './types'
 import { DEFAULT_CONFIG, STORAGE_KEY } from './constants'
 import { logger } from './logger'
 
 const STATS_KEY = 'stats'
+const PICKER_FORM_KEY = 'pickerFormState'
+const PICKER_RESULT_KEY = 'pickerResult'
+const PICKER_ACTIVE_KEY = 'pickerActive'
 
 /**
  * Récupère la configuration depuis chrome.storage.sync
@@ -173,4 +176,39 @@ export async function resetStats(): Promise<void> {
     logger.error('[Storage] Error resetting stats:', error)
     throw error
   }
+}
+
+// ============================================
+// GESTION DU PICKER
+// ============================================
+
+export async function savePickerFormState(state: PickerFormState): Promise<void> {
+  await chrome.storage.local.set({ [PICKER_FORM_KEY]: state })
+}
+
+export async function getPickerFormState(): Promise<PickerFormState | null> {
+  const result = await chrome.storage.local.get(PICKER_FORM_KEY)
+  return (result[PICKER_FORM_KEY] as PickerFormState) || null
+}
+
+export async function savePickerResult(result: PickerResult): Promise<void> {
+  await chrome.storage.local.set({ [PICKER_RESULT_KEY]: result })
+}
+
+export async function getPickerResult(): Promise<PickerResult | null> {
+  const result = await chrome.storage.local.get(PICKER_RESULT_KEY)
+  return (result[PICKER_RESULT_KEY] as PickerResult) || null
+}
+
+export async function setPickerActive(active: boolean): Promise<void> {
+  await chrome.storage.local.set({ [PICKER_ACTIVE_KEY]: active })
+}
+
+export async function isPickerActive(): Promise<boolean> {
+  const result = await chrome.storage.local.get(PICKER_ACTIVE_KEY)
+  return result[PICKER_ACTIVE_KEY] === true
+}
+
+export async function clearPickerState(): Promise<void> {
+  await chrome.storage.local.remove([PICKER_FORM_KEY, PICKER_RESULT_KEY, PICKER_ACTIVE_KEY])
 }
