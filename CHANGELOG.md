@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.1...v0.1.2
+
+[compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.1.1...v0.1.2)
+
+### 🩹 Fixes
+
+- Sync package version with manifest version ([17c5be3](https://github.com/LouisMazel/chrome-html-blocker/commit/17c5be3))
+
+### ❤️ Contributors
+
+- LouisMazel ([@LouisMazel](https://github.com/LouisMazel))
+
 ## v0.1.0...v0.1.1
 
 [compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.1.0...v0.1.1)
