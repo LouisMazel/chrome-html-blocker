@@ -1,7 +1,6 @@
 {
   "manifest_version": 3,
   "name": "HTML Blocker",
-  "version": "1.0.0",
   "description": "Automatically remove intrusive HTML elements from websites",
   "permissions": [
     "storage",
