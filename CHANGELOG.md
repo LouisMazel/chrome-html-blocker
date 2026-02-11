@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.2.0...v0.3.0
+
+[compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.2.0...v0.3.0)
+
+### 🚀 Enhancements
+
+- Add element picker for visual CSS selector generation ([f5d086e](https://github.com/LouisMazel/chrome-html-blocker/commit/f5d086e))
+
+  Click the "Pick" button next to the CSS Selector field to visually
+  select an element on the page. Hover to preview the selector, click
+  to confirm. The popup reopens automatically with the selector
+  pre-filled. If the popup can't reopen, the config is saved directly.
+
+### ❤️ Contributors
+
+- LouisMazel ([@LouisMazel](https://github.com/LouisMazel))
+
 ## v0.1.2...v0.2.0
 
 [compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.1.2...v0.2.0)
