@@ -1,15 +1,15 @@
 import type { Message, SiteConfig } from '../shared/types'
-import { logger } from '../shared/logger'
-import { clearPickerState, getConfig, incrementBlockedCount, isPickerActive, savePickerResult, setPickerActive } from '../shared/storage'
+import { FORCE_SCROLL_CSS, INJECTED_STYLE_ID_PREFIX } from '../shared/constants'
+import { DEBUG_STORAGE_KEY, logger, setDebugEnabled } from '../shared/logger'
+import { clearPickerState, getConfig, getDebugMode, incrementBlockedCount, isPickerActive, savePickerResult, setPickerActive } from '../shared/storage'
 import { MessageType } from '../shared/types'
 
 let observer: MutationObserver | null = null
-let currentSelector: string | null = null
-let currentSiteId: string | null = null
+let activeStyleIds: Set<string> = new Set()
 
 /**
  * Convertit un pattern Chrome en RegExp
- * Ex: "*://www.lequipe.fr/tv/*" => RegExp("^https?://www\\.lequipe\\.fr/tv/.*")
+ * Ex: "*://www.lequipe.fr/*" => RegExp("^https?://www\\.lequipe\\.fr/.*")
  */
 function patternToRegex(pattern: string): RegExp {
   let regexString = pattern
@@ -27,9 +27,10 @@ function patternToRegex(pattern: string): RegExp {
 }
 
 /**
- * Trouve la configuration correspondant à l'URL actuelle
+ * Trouve toutes les configurations correspondant à l'URL actuelle
  */
-function findMatchingSiteConfig(url: string, sites: SiteConfig[]): SiteConfig | null {
+function findMatchingSiteConfigs(url: string, sites: SiteConfig[]): SiteConfig[] {
+  const matches: SiteConfig[] = []
   for (const site of sites) {
     if (!site.enabled)
       continue
@@ -37,30 +38,30 @@ function findMatchingSiteConfig(url: string, sites: SiteConfig[]): SiteConfig | 
     try {
       const regex = patternToRegex(site.urlPattern)
       if (regex.test(url)) {
-        return site
+        matches.push(site)
       }
     }
     catch (error) {
-      logger.error('[Modal Blocker] Invalid pattern:', site.urlPattern, error)
+      logger.error('Invalid pattern:', site.urlPattern, error)
     }
   }
-  return null
+  return matches
 }
 
 /**
  * Supprime les éléments correspondant au sélecteur
  */
-function removeModals(selector: string): void {
+function removeModals(selector: string, siteIds: string[]): void {
   const elements = document.querySelectorAll(selector)
   if (elements.length > 0) {
-    logger.info(`Removing ${elements.length} element(s) matching "${selector}"`)
+    logger.debug(`Removing ${elements.length} element(s) matching "${selector}"`)
     elements.forEach((el) => {
       el.remove()
     })
 
-    // Incrémenter le compteur de stats
-    if (currentSiteId) {
-      incrementBlockedCount(currentSiteId, elements.length)
+    // Incrémenter le compteur de stats pour chaque site concerné
+    for (const siteId of siteIds) {
+      incrementBlockedCount(siteId, elements.length)
     }
   }
 }
@@ -68,7 +69,7 @@ function removeModals(selector: string): void {
 /**
  * Configure le MutationObserver pour surveiller les nouveaux éléments
  */
-function setupObserver(selector: string): void {
+function setupObserver(selector: string, siteIds: string[]): void {
   // Déconnecter l'observer existant si présent
   if (observer) {
     observer.disconnect()
@@ -76,7 +77,7 @@ function setupObserver(selector: string): void {
 
   // Créer un nouvel observer
   observer = new MutationObserver(() => {
-    removeModals(selector)
+    removeModals(selector, siteIds)
   })
 
   // Observer les changements dans le DOM
@@ -85,7 +86,7 @@ function setupObserver(selector: string): void {
     subtree: true,
   })
 
-  logger.info('Observer started for selector:', selector)
+  logger.debug('Observer started for selector:', selector)
 }
 
 /**
@@ -95,13 +96,58 @@ function stopObserver(): void {
   if (observer) {
     observer.disconnect()
     observer = null
-    logger.info('Observer stopped')
+    logger.debug('Observer stopped')
   }
+}
+
+// ============================================
+// CSS INJECTION
+// ============================================
+
+/**
+ * Génère un ID déterministe pour un <style> injecté
+ */
+function getStyleId(siteId: string, suffix: string): string {
+  return `${INJECTED_STYLE_ID_PREFIX}${siteId}_${suffix}`
+}
+
+/**
+ * Injecte un <style> dans le <head>. Idempotent.
+ */
+function injectStyle(id: string, css: string): void {
+  if (document.getElementById(id))
+    return
+
+  const style = document.createElement('style')
+  style.id = id
+  style.textContent = css
+  document.head.appendChild(style)
+  logger.debug('Injected style:', id)
+}
+
+/**
+ * Supprime un <style> injecté par ID
+ */
+function removeInjectedStyle(id: string): void {
+  const el = document.getElementById(id)
+  if (el) {
+    el.remove()
+    logger.debug('Removed style:', id)
+  }
+}
+
+/**
+ * Supprime tous les <style> injectés par l'extension
+ */
+function removeAllInjectedStyles(): void {
+  document.querySelectorAll(`[id^="${INJECTED_STYLE_ID_PREFIX}"]`).forEach(el => el.remove())
+  activeStyleIds.clear()
 }
 
 /**
  * Initialise l'extension pour la page actuelle
  */
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function initialize(): Promise<void> {
   try {
     const config = await getConfig()
@@ -109,34 +155,70 @@ async function initialize(): Promise<void> {
     // Vérifier si l'extension est activée globalement
     if (!config.enabled) {
       stopObserver()
+      removeAllInjectedStyles()
+
       return
     }
 
-    // Trouver la configuration correspondant à cette page
+    // Trouver toutes les configurations correspondant à cette page
     const currentUrl = globalThis.location.href
-    const siteConfig = findMatchingSiteConfig(currentUrl, config.sites)
+    const matchingSites = findMatchingSiteConfigs(currentUrl, config.sites)
 
-    if (!siteConfig) {
+    if (matchingSites.length === 0) {
       stopObserver()
+      removeAllInjectedStyles()
+
       return
     }
 
-    logger.info('Active for:', currentUrl, 'with selector:', siteConfig.selector)
+    logger.debug(`${matchingSites.length} matching site(s) for:`, currentUrl)
 
-    // Si le sélecteur ou le site a changé, mettre à jour
-    if (currentSelector !== siteConfig.selector || currentSiteId !== siteConfig.id) {
-      currentSelector = siteConfig.selector
-      currentSiteId = siteConfig.id
+    // Collecter les styles à injecter et les selectors pour element removal
+    const newStyleIds = new Set<string>()
+    const removeSites: { siteId: string, selector: string }[] = []
 
-      // Supprimer les éléments existants
-      removeModals(siteConfig.selector)
+    for (const site of matchingSites) {
+      // Element removal
+      if (site.selector && site.selector.trim()) {
+        removeSites.push({ siteId: site.id, selector: site.selector })
+      }
 
-      // Configurer l'observer pour les nouveaux éléments
-      setupObserver(siteConfig.selector)
+      // Force scroll
+      if (site.forceScroll) {
+        const styleId = getStyleId(site.id, 'fs')
+        injectStyle(styleId, FORCE_SCROLL_CSS)
+        newStyleIds.add(styleId)
+      }
+
+      // Custom CSS
+      if (site.customCss && site.customCss.trim()) {
+        const styleId = getStyleId(site.id, 'cc')
+        injectStyle(styleId, site.customCss)
+        newStyleIds.add(styleId)
+      }
+    }
+
+    // Cleanup : supprimer les styles qui ne sont plus actifs
+    for (const oldId of activeStyleIds) {
+      if (!newStyleIds.has(oldId)) {
+        removeInjectedStyle(oldId)
+      }
+    }
+    activeStyleIds = newStyleIds
+
+    // Element removal : combiner les sélecteurs
+    if (removeSites.length > 0) {
+      const combinedSelector = removeSites.map(s => s.selector).join(', ')
+      const siteIds = removeSites.map(s => s.siteId)
+      removeModals(combinedSelector, siteIds)
+      setupObserver(combinedSelector, siteIds)
+    }
+    else {
+      stopObserver()
     }
   }
   catch (error) {
-    logger.error('[HTML Blocker] Initialization error:', error)
+    logger.error('Initialization error:', error)
   }
 }
 
@@ -145,8 +227,11 @@ async function initialize(): Promise<void> {
  */
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync' && changes.config) {
-    logger.info('Configuration changed, reinitializing...')
+    logger.debug('Configuration changed, reinitializing...')
     initialize()
+  }
+  if (area === 'local' && changes[DEBUG_STORAGE_KEY]) {
+    setDebugEnabled(changes[DEBUG_STORAGE_KEY].newValue === true)
   }
 })
 
@@ -345,7 +430,7 @@ function enterPickerMode(): void {
   document.addEventListener('click', onPickerClick, true)
   document.addEventListener('keydown', onPickerKeyDown, true)
 
-  logger.info('[Picker] Entered picker mode')
+  logger.debug('[Picker] Entered picker mode')
 }
 
 function onPickerMouseMove(e: MouseEvent): void {
@@ -390,7 +475,7 @@ function onPickerClick(e: MouseEvent): void {
     return
 
   const selector = generateSelector(target)
-  logger.info('[Picker] Selected:', selector)
+  logger.debug('[Picker] Selected:', selector)
 
   // Sauvegarder le résultat et notifier le service worker
   savePickerResult({ selector, timestamp: Date.now() }).then(() => {
@@ -404,7 +489,7 @@ function onPickerKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
-    logger.info('[Picker] Cancelled')
+    logger.debug('[Picker] Cancelled')
     clearPickerState()
     exitPickerMode()
   }
@@ -427,7 +512,7 @@ function exitPickerMode(): void {
   document.removeEventListener('click', onPickerClick, true)
   document.removeEventListener('keydown', onPickerKeyDown, true)
 
-  logger.info('[Picker] Exited picker mode')
+  logger.debug('[Picker] Exited picker mode')
 }
 
 /**
@@ -451,6 +536,10 @@ chrome.runtime.onMessage.addListener((message: Message) => {
   }
 })
 
-// Initialiser au chargement de la page
-initialize()
-checkPickerOnLoad()
+// Initialiser le mode debug puis l'extension
+getDebugMode().then((enabled) => {
+  setDebugEnabled(enabled)
+  logger.debug('Content script loaded on:', globalThis.location.href)
+  initialize()
+  checkPickerOnLoad()
+})

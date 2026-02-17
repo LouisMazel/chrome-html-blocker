@@ -495,6 +495,104 @@ h2 {
   }
 }
 
+/* Footer */
+.footer {
+  padding: 10px 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.checkbox-label--small {
+  font-size: 12px;
+  color: #adb5bd;
+}
+
+.checkbox-label--small input[type='checkbox'] {
+  width: 13px;
+  height: 13px;
+}
+
+/* Checkbox Label */
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+/* Custom CSS Textarea */
+#custom-css {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color 0.2s;
+}
+
+#custom-css:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Advanced label */
+.advanced-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #667eea;
+  background: #e8eafd;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 4px;
+}
+
+/* Feature Badges on site cards */
+.site-card-features {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.site-card-feature {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.site-card-feature--remove {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.site-card-feature--force-scroll {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.site-card-feature--custom-css {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
 /* Utility */
 .hidden {
   display: none !important;

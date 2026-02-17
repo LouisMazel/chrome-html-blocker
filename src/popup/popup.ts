@@ -1,6 +1,6 @@
 import type { BlockingStats, SiteConfig } from '../shared/types'
 import { logger } from '../shared/logger'
-import { addSite, clearPickerState, deleteSite, getConfig, getPickerFormState, getPickerResult, getStats, resetStats, saveConfig, savePickerFormState, setPickerActive, updateSite } from '../shared/storage'
+import { addSite, clearPickerState, deleteSite, getConfig, getDebugMode, getPickerFormState, getPickerResult, getStats, resetStats, saveConfig, savePickerFormState, setDebugMode, setPickerActive, updateSite } from '../shared/storage'
 import { MessageType } from '../shared/types'
 
 // Éléments DOM
@@ -33,6 +33,11 @@ const alertOkBtn = document.getElementById('alertOkBtn') as HTMLButtonElement
 
 // Picker
 const pickElementBtn = document.getElementById('pickElementBtn') as HTMLButtonElement
+
+// Nouveaux champs
+const forceScrollCheckbox = document.getElementById('forceScroll') as HTMLInputElement
+const customCssTextarea = document.getElementById('custom-css') as HTMLTextAreaElement
+const debugModeCheckbox = document.getElementById('debug-mode') as HTMLInputElement
 
 // Variable pour suivre l'édition
 let editingSiteId: string | null = null
@@ -130,6 +135,29 @@ function createSiteCard(site: SiteConfig, blockedCount: number): HTMLDivElement 
   card.className = 'site-card'
 
   const displayName = site.name || 'Unnamed'
+  const hasSelector = site.selector && site.selector.trim()
+  const hasForceScroll = site.forceScroll
+  const hasCustomCss = site.customCss && site.customCss.trim()
+
+  // Feature badges
+  const badges: string[] = []
+  if (hasSelector)
+    badges.push('<span class="site-card-feature site-card-feature--remove">Remove</span>')
+  if (hasForceScroll)
+    badges.push('<span class="site-card-feature site-card-feature--force-scroll">Force Scroll</span>')
+  if (hasCustomCss)
+    badges.push('<span class="site-card-feature site-card-feature--custom-css">Custom CSS</span>')
+
+  // Info lines
+  let infoHtml = `<div class="site-card-info"><strong>URL:</strong> ${escapeHtml(site.urlPattern)}</div>`
+  if (hasSelector) {
+    infoHtml += `<div class="site-card-info"><strong>Selector:</strong> ${escapeHtml(site.selector)}</div>`
+  }
+
+  // Stats only for element removal
+  const statsHtml = (hasSelector && blockedCount > 0)
+    ? `<div class="site-card-stats">${blockedCount} blocked</div>`
+    : ''
 
   card.innerHTML = `
     <div class="site-card-header">
@@ -139,13 +167,9 @@ function createSiteCard(site: SiteConfig, blockedCount: number): HTMLDivElement 
         <span class="slider"></span>
       </label>
     </div>
-    <div class="site-card-info">
-      <strong>URL:</strong> ${escapeHtml(site.urlPattern)}
-    </div>
-    <div class="site-card-info">
-      <strong>Selector:</strong> ${escapeHtml(site.selector)}
-    </div>
-    ${blockedCount > 0 ? `<div class="site-card-stats">${blockedCount} blocked</div>` : ''}
+    ${badges.length > 0 ? `<div class="site-card-features">${badges.join('')}</div>` : ''}
+    ${infoHtml}
+    ${statsHtml}
     <div class="site-card-buttons">
       <button class="btn-edit" data-site-id="${site.id}">Edit</button>
       <button class="btn-delete" data-site-id="${site.id}">Delete</button>
@@ -195,7 +219,7 @@ async function handleGlobalToggle(enabled: boolean): Promise<void> {
     toggleLabel.textContent = enabled ? 'Enabled' : 'Disabled'
   }
   catch (error) {
-    logger.error('Error toggling extension:', error)
+    logger.error('[Popup] Error toggling extension:', error)
     await showAlert('Error updating extension status')
     extensionToggle.checked = !enabled
   }
@@ -209,7 +233,7 @@ async function handleSiteToggle(siteId: string, enabled: boolean): Promise<void>
     await updateSite(siteId, { enabled })
   }
   catch (error) {
-    logger.error('Error toggling site:', error)
+    logger.error('[Popup] Error toggling site:', error)
     await showAlert('Error updating site')
     await loadAndRender()
   }
@@ -224,7 +248,7 @@ async function handleDeleteSite(siteId: string): Promise<void> {
     await loadAndRender()
   }
   catch (error) {
-    logger.error('Error deleting site:', error)
+    logger.error('[Popup] Error deleting site:', error)
     await showAlert('Error deleting site')
   }
 }
@@ -238,6 +262,8 @@ async function openAddModal(): Promise<void> {
   siteNameInput.value = ''
   urlPatternInput.value = ''
   selectorInput.value = ''
+  forceScrollCheckbox.checked = false
+  customCssTextarea.value = ''
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -267,6 +293,8 @@ function openEditModal(site: SiteConfig): void {
   siteNameInput.value = site.name || ''
   urlPatternInput.value = site.urlPattern
   selectorInput.value = site.selector
+  forceScrollCheckbox.checked = site.forceScroll || false
+  customCssTextarea.value = site.customCss || ''
   formError.classList.add('hidden')
   editModal.classList.remove('hidden')
   siteNameInput.focus()
@@ -278,6 +306,8 @@ function openEditModal(site: SiteConfig): void {
 function closeModal(): void {
   editModal.classList.add('hidden')
   editingSiteId = null
+  forceScrollCheckbox.checked = false
+  customCssTextarea.value = ''
 }
 
 /**
@@ -324,35 +354,45 @@ async function handleFormSubmit(e: Event): Promise<void> {
   const name = siteNameInput.value.trim()
   const urlPattern = urlPatternInput.value.trim()
   const selector = selectorInput.value.trim()
+  const forceScroll = forceScrollCheckbox.checked
+  const customCss = customCssTextarea.value.trim()
 
-  // Validation
+  // Validation URL pattern (toujours requis)
   if (!validateUrlPattern(urlPattern)) {
     formError.textContent = 'Invalid URL pattern. Must contain :// (e.g., *://example.com/*)'
     formError.classList.remove('hidden')
     return
   }
 
-  if (!validateSelector(selector)) {
+  // Au moins une fonctionnalité doit être active
+  if (!selector && !forceScroll && !customCss) {
+    formError.textContent = 'At least one feature must be configured (selector, force scroll, or custom CSS).'
+    formError.classList.remove('hidden')
+    return
+  }
+
+  // Valider le sélecteur seulement s'il est renseigné
+  if (selector && !validateSelector(selector)) {
     formError.textContent = 'Invalid CSS selector.'
     formError.classList.remove('hidden')
     return
   }
 
   try {
+    const siteData = {
+      name: name || undefined,
+      urlPattern,
+      selector,
+      forceScroll: forceScroll || undefined,
+      customCss: customCss || undefined,
+    }
+
     if (editingSiteId) {
-      // Mode édition
-      await updateSite(editingSiteId, {
-        name: name || undefined,
-        urlPattern,
-        selector,
-      })
+      await updateSite(editingSiteId, siteData)
     }
     else {
-      // Mode ajout
       await addSite({
-        name: name || undefined,
-        urlPattern,
-        selector,
+        ...siteData,
         enabled: true,
       })
     }
@@ -361,7 +401,7 @@ async function handleFormSubmit(e: Event): Promise<void> {
     await loadAndRender()
   }
   catch (error) {
-    logger.error('Error saving site:', error)
+    logger.error('[Popup] Error saving site:', error)
     formError.textContent = 'Error saving site'
     formError.classList.remove('hidden')
   }
@@ -409,7 +449,7 @@ async function checkPickerResult(): Promise<void> {
     await clearPickerState()
   }
   catch (error) {
-    logger.error('Error checking picker result:', error)
+    logger.error('[Popup] Error checking picker result:', error)
   }
 }
 
@@ -467,7 +507,7 @@ async function handlePickElement(): Promise<void> {
     pickElementBtn.disabled = true
   }
   catch (error) {
-    logger.error('Error starting picker:', error)
+    logger.error('[Popup] Error starting picker:', error)
     await clearPickerState()
     await showAlert('Error starting element picker.')
   }
@@ -490,7 +530,13 @@ editModal.addEventListener('click', (e) => {
   }
 })
 
+// Debug mode toggle
+debugModeCheckbox.addEventListener('change', () => {
+  setDebugMode(debugModeCheckbox.checked)
+})
+
 // Charger la configuration au démarrage et vérifier le picker
+getDebugMode().then(enabled => debugModeCheckbox.checked = enabled)
 checkPickerResult().then(() => loadAndRender())
 
 /**
@@ -503,7 +549,7 @@ async function handleResetStats(): Promise<void> {
       await loadAndRender()
     }
     catch (error) {
-      logger.error('Error resetting stats:', error)
+      logger.error('[Popup] Error resetting stats:', error)
       await showAlert('Error resetting statistics')
     }
   }

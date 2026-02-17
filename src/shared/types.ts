@@ -1,9 +1,11 @@
 export interface SiteConfig {
   id: string // UUID unique
   urlPattern: string // Pattern Chrome (*://domain.com/path/*)
-  selector: string // Sélecteur CSS
+  selector: string // Sélecteur CSS pour suppression d'éléments (optionnel en pratique)
   enabled: boolean // Toggle par site
   name?: string // Nom optionnel
+  forceScroll?: boolean // Injecter du CSS pour débloquer le scroll
+  customCss?: string // CSS brut à injecter dans la page
 }
 
 export interface ExtensionConfig {
