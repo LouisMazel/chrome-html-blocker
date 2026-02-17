@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.3.0...v0.4.0
+
+[compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.3.0...v0.4.0)
+
+### 🚀 Enhancements
+
+- Add force scroll and custom CSS injection per site ([bbb2048](https://github.com/LouisMazel/chrome-html-blocker/commit/bbb2048))
+
+  Each site now supports additional blocking features:
+  - **Force scroll**: toggle that prevents websites from
+    blocking page scrolling (e.g. scroll-locking overlays)
+  - **Custom CSS**: inject your own CSS rules into pages
+    CSS selector is now optional. At least one feature must
+    be configured (selector, force scroll, or custom CSS).
+    All features can be combined on the same site.
+
+- Add debug mode with toggle in popup ([0871a5e](https://github.com/LouisMazel/chrome-html-blocker/commit/0871a5e))
+
+  verbose logging. When disabled, only errors and warnings
+  appear in the console. State persists across sessions.
+
+### ❤️ Contributors
+
+- LouisMazel ([@LouisMazel](https://github.com/LouisMazel))
+
 ## v0.2.0...v0.3.0
 
 [compare changes](https://github.com/LouisMazel/chrome-html-blocker/compare/v0.2.0...v0.3.0)
