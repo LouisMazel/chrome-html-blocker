@@ -212,3 +212,18 @@ export async function isPickerActive(): Promise<boolean> {
 export async function clearPickerState(): Promise<void> {
   await chrome.storage.local.remove([PICKER_FORM_KEY, PICKER_RESULT_KEY, PICKER_ACTIVE_KEY])
 }
+
+// ============================================
+// GESTION DU MODE DEBUG
+// ============================================
+
+const DEBUG_KEY = 'debugMode'
+
+export async function getDebugMode(): Promise<boolean> {
+  const result = await chrome.storage.local.get(DEBUG_KEY)
+  return result[DEBUG_KEY] === true
+}
+
+export async function setDebugMode(enabled: boolean): Promise<void> {
+  await chrome.storage.local.set({ [DEBUG_KEY]: enabled })
+}

@@ -1,7 +1,7 @@
 import type { Message } from '../shared/types'
 import { DEFAULT_CONFIG } from '../shared/constants'
-import { logger } from '../shared/logger'
-import { addSite, clearPickerState, getConfig, getPickerFormState, getPickerResult, saveConfig, updateSite } from '../shared/storage'
+import { DEBUG_STORAGE_KEY, logger, setDebugEnabled } from '../shared/logger'
+import { addSite, clearPickerState, getConfig, getDebugMode, getPickerFormState, getPickerResult, saveConfig, updateSite } from '../shared/storage'
 import { MessageType } from '../shared/types'
 
 /**
@@ -29,14 +29,14 @@ async function updateBadge(): Promise<void> {
  * Initialiser la configuration par défaut lors de l'installation
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
-  logger.info('[Service Worker] Extension installed/updated:', details.reason)
+  logger.debug('[Service Worker] Extension installed/updated:', details.reason)
 
   try {
     const config = await getConfig()
 
     // Si aucune config n'existe, créer la config par défaut
     if (!config || !config.sites || config.sites.length === 0) {
-      logger.info('[Service Worker] Initializing default configuration')
+      logger.debug('[Service Worker] Initializing default configuration')
       await saveConfig(DEFAULT_CONFIG)
     }
 
@@ -53,8 +53,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  */
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync' && changes.config) {
-    logger.info('[Service Worker] Configuration changed')
+    logger.debug('[Service Worker] Configuration changed')
     updateBadge()
+  }
+  if (area === 'local' && changes[DEBUG_STORAGE_KEY]) {
+    setDebugEnabled(changes[DEBUG_STORAGE_KEY].newValue === true)
   }
 })
 
@@ -88,20 +91,22 @@ async function autoSavePickerResult(): Promise<void> {
   }
 
   await clearPickerState()
-  logger.info('[Service Worker] Auto-saved picker result')
+  logger.debug('[Service Worker] Auto-saved picker result')
 }
 
 chrome.runtime.onMessage.addListener((message: Message) => {
   if (message.type === MessageType.PICKER_DONE) {
     // Tenter de rouvrir la popup, sinon sauvegarder directement
     chrome.action.openPopup().catch(() => {
-      logger.info('[Service Worker] Could not reopen popup, auto-saving')
+      logger.debug('[Service Worker] Could not reopen popup, auto-saving')
       autoSavePickerResult()
     })
   }
 })
 
-// Mettre à jour le badge au démarrage
-updateBadge()
-
-logger.info('[Service Worker] HTML Blocker service worker initialized')
+// Initialiser le mode debug puis le service worker
+getDebugMode().then((enabled) => {
+  setDebugEnabled(enabled)
+  updateBadge()
+  logger.debug('[Service Worker] HTML Blocker service worker initialized')
+})
