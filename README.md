@@ -19,7 +19,7 @@ Modern Chrome extension to automatically remove unwanted HTML elements from webs
 
 The extension comes pre-configured to block L'Équipe modals:
 
-- **Site**: https://www.lequipe.fr/tv/*
+- **Site**: https://www.lequipe.fr/*
 - **Selector**: `div.Modal[data-modal="amsBlock"]`
 
 ## Installation
@@ -221,7 +221,7 @@ URL patterns use the Chrome match pattern format:
 ### Manual Tests
 
 1. **Basic removal test**
-   - Visit https://www.lequipe.fr/tv/
+   - Visit https://www.lequipe.fr/
    - Verify that the ad blocker modal doesn't appear
    - Open the console: you should see `[HTML Blocker]` logs
 
@@ -256,7 +256,7 @@ URL patterns use the Chrome match pattern format:
 The extension displays useful logs in the; console:
 
 ```
-[html blocker] active; for: https://www.lequipe.fr/tv/... with selector: div.Modal[data-modal="amsBlock"]
+[html blocker] active; for: https://www.lequipe.fr/... with selector: div.Modal[data-modal="amsBlock"]
 [HTML Blocker] Removing 1 element(s) matching "div.Modal[data-modal='amsBlock']"
 [HTML Blocker] Observer started for selector: div.Modal[data-modal="amsBlock"]
 ```
